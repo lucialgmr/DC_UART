@@ -3,7 +3,7 @@
 //-------------------------------------------------------------------\
 
 `timescale 1ns/10ps
-`include "UARTB_CORE.v" // Asume que el nuevo core modificado se llama UARTB_CORE.v
+`include "uart_burst.v"
 
 module tb();
 
@@ -12,14 +12,12 @@ reg clk=0;
 reg rxd=1;        // Entrada RX (inicializada a IDLE=1)
 reg wrtx=0;       // Pulso de escritura TX
 reg wrbaud=0;     // Pulso de escritura BRG/Mode
-reg[15:0] d;      // Datos de 16 bits (8 bits para TX, 9 bits para BRG/Mode)
+reg[31:0] d;      // Datos de 16 bits (8 bits para TX, 9 bits para BRG/Mode)
 reg rd = 0;       // Pulso de lectura RX (borra DV)
 
 // Señal de salida TX del módulo
 wire txd;
 
-// Se asume que UARTB_CORE tiene los mismos puertos que tu UART_CORE original
-// y que se ha modificado internamente para el modo Ráfaga.
 UARTB_CORE myUART(
   .txd(txd),
   //... otras salidas de flag (tend, thre, dv, etc.) - Si existen, se visualizan.
@@ -91,32 +89,15 @@ initial begin
 
     // 4. FASE MODO RÁFAGA (TX de 32 bits)
     // Enviar "ABCD" (0x44434241 - Little Endian)
-    // Se asume que el puerto 'd' acepta 32 bits en el modo Ráfaga (aunque esté declarado 16'b)
-    // NOTA: Si tu core usa el puerto 'd[15:0]', este test puede necesitar adaptación
-    //       para simular el bus de 32 bits. Para fines de prueba directa, inyectamos el valor.
     
     // Simulando el valor completo de 32 bits que vendría del bus
     reg [31:0] data32;
     data32 = 32'h44434241; // D, C, B, A (en el bus de 32 bits)
 
     wrtx = 1; 
-    // Adaptación: Forzar la inyección del valor de 32 bits si el puerto 'd' es solo 16.
-    // **Si tu 'UARTB_CORE' tiene un puerto d[31:0] para el modo ráfaga, cambia la línea 78 a 'reg[31:0] d;'**
-    // y usa 'd = data32;' aquí.
-    
-    // Si tienes que usar el puerto 16 bits (d[15:0]), tendrías que simular la escritura de 32 bits en 'tbr'
-    // directamente dentro del testbench si fuera posible, o asumir que la implementación
-    // de la CPU es la que envía el valor completo (como en el sistema LaRVa).
-    // Para este test unitario, asumiremos que inyectamos el valor completo aunque 'd' sea 16-bit
-    // y el core lo manejará internamente (ESTO DEPENDE DE CÓMO HAYAS DEFINIDO EL PORT MAP DE TU UARTB_CORE).
-    
-    // Para simplificar, asumiremos que d se expande a 32 bits para este test.
-    // Si no tienes puerto de 32 bits, necesitarás un módulo wrapper que adapte la UARTB_CORE
-    // o modificar el testbench para reflejar tu core (ejemplo: usar $root.myUART.tbr = data32)
 
     // Escribimos el dato de 32 bits (ABCD)
-    // **Ajustar esta línea si 'd' es 32 bits: d = data32;**
-    d[15:0] = data32[15:0];
+	d[31:0] = data32[31:0];
     wrtx = 1; 
     #10 wrtx = 0; 
     $display("@%0t: Enviando Ráfaga 1 (ABCD, 32-bit).", $time);

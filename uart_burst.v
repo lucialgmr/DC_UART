@@ -22,14 +22,15 @@ module UARTB_CORE(
 
 parameter BAUDBITS=9;
 
-//modified // Nuevos registros para la implementación de modos
-reg [31:0]tbr;       //modified // Transmitter Buffer Register (32 bits)
-reg mode;           //modified // 1: Ráfaga, 0: Normal (configurado con wrbaud, bit 31)
-reg moden;          //modified // Registro del modo para la próxima carga a THR (registrado con wrtx)
-reg [1:0] cntbyte;  //modified // Contador de bytes para el modo ráfaga (0 a 3)
-reg data_word_pending = 1'b0; //modified // Señal de palabra disponible en tbr
-reg thr_just_loaded = 1'b0; //modified // Señal para resetear divtx y empezar la transmisión
-
+///ADDED_BEGIN // Nuevos registros para la implementación de modos
+  reg [31:0]tbr;     //added // Transmitter Buffer Register (32 bits)
+reg mode;           //added // 1: Ráfaga, 0: Normal (configurado con wrbaud, bit 31)
+reg moden;          //added // Registro del modo para la próxima carga a THR (registrado con wrtx)
+  reg [1:0] cntbyte;  //added // Contador de bytes para el modo ráfaga (0 a 3)
+reg data_word_pending = 1'b0; //added // Señal de palabra disponible en tbr
+reg thr_just_loaded = 1'b0; //added // Señal para resetear divtx y empezar la transmisión
+///ADDED_END
+  
 //---------------------------------------------------------
 // Bloque de Escritura: TBR, BRG y MODE
 //---------------------------------------------------------

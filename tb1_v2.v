@@ -61,13 +61,13 @@ initial begin
     // Se enviarán 'A', 'B', 'C'
     
     // Enviar 'A' (0x41)
-    #100 wrtx = 1; d = 16'h0041; 
+    #100 wrtx = 1; d = 32'h00000041; 
     #10 wrtx = 0; 
     $display("@%0t: Enviando 'A' (Modo Normal).", $time);
     #100; // Espera un poco
 
     // Enviar 'B' (0x42) - Mismo modo
-    wrtx = 1; d = 16'h0042; 
+    wrtx = 1; d = 32'h00000042; 
     #10 wrtx = 0; 
     $display("@%0t: Enviando 'B' (Modo Normal).", $time);
     #100; // Espera un poco
@@ -109,7 +109,7 @@ initial begin
     
     #50;
     // Enviar 'Z' (0x5A)
-    wrtx = 1; d = 16'h005A; 
+    wrtx = 1; d = 32'h0000005A; 
     #10 wrtx = 0; 
     $display("@%0t: Enviando 'Z' (Modo Normal Final).", $time);
 

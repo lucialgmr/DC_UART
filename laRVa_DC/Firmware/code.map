@@ -1,0 +1,114 @@
+Archive member included to satisfy reference by file (symbol)
+
+c:/tp1_rv32e/tools/xpack-risc_v/bin/../lib/gcc/riscv-none-elf/12.2.0/rv32e/ilp32e\libgcc.a(div.o)
+                              C:\Users\INVITA~1\AppData\Local\Temp\ccP64yZQ.o (__udivsi3)
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+RONLY            0x0000000000000000 0x0000000000001c00 xr
+RAM              0x0000000000001c00 0x0000000000000400 xrw
+*default*        0x0000000000000000 0xffffffffffffffff
+
+Linker script and memory map
+
+
+.text           0x0000000000000000      0xc8c
+                0x0000000000000000                . = ALIGN (0x4)
+ *(.boot)
+ .boot          0x0000000000000000        0x4 C:\Users\INVITA~1\AppData\Local\Temp\ccV40xMj.o
+ *(.text)
+ .text          0x0000000000000004       0xa0 C:\Users\INVITA~1\AppData\Local\Temp\ccV40xMj.o
+                0x0000000000000098                delay_loop
+ .text          0x00000000000000a4      0x7ac C:\Users\INVITA~1\AppData\Local\Temp\ccP64yZQ.o
+                0x00000000000000a4                irq2_handler
+                0x0000000000000108                irq3_handler
+                0x0000000000000158                _putch
+                0x0000000000000630                _puts
+                0x0000000000000664                _printf
+                0x00000000000006a0                _sprintf
+                0x00000000000006d8                _getch
+                0x000000000000071c                haschar
+                0x0000000000000738                getMEPC
+                0x0000000000000744                irq1_handler
+                0x00000000000007b4                spixfer
+                0x00000000000007d4                getw
+                0x0000000000000828                _memcpy
+ .text          0x0000000000000850       0xb4 c:/tp1_rv32e/tools/xpack-risc_v/bin/../lib/gcc/riscv-none-elf/12.2.0/rv32e/ilp32e\libgcc.a(div.o)
+                0x0000000000000850                __divsi3
+                0x0000000000000858                __udivsi3
+                0x0000000000000858                __hidden___udivsi3
+                0x00000000000008a0                __umodsi3
+                0x00000000000008d4                __modsi3
+ *(.text*)
+ .text.startup  0x0000000000000904      0x18c C:\Users\INVITA~1\AppData\Local\Temp\ccP64yZQ.o
+                0x0000000000000904                main
+ *(.rodata)
+ *(.rodata*)
+ .rodata.str1.4
+                0x0000000000000a90      0x1fc C:\Users\INVITA~1\AppData\Local\Temp\ccP64yZQ.o
+ *(.srodata)
+ *(.srodata*)
+                0x0000000000000c8c                _etext = .
+                0x0000000000000c8c                _sidata = _etext
+
+.rela.dyn       0x0000000000000c8c        0x0
+ .rela.text     0x0000000000000c8c        0x0 C:\Users\INVITA~1\AppData\Local\Temp\ccV40xMj.o
+
+.data           0x0000000000001c00        0x4 load address 0x0000000000000c8c
+                0x0000000000001c00                . = ALIGN (0x4)
+                0x0000000000000c8c                _sdata_values = LOADADDR (.data)
+                0x0000000000001c00                _sdata = .
+                0x0000000000001c00                _ram_start = .
+                0x0000000000001c00                . = ALIGN (0x4)
+ *(.data)
+ .data          0x0000000000001c00        0x0 C:\Users\INVITA~1\AppData\Local\Temp\ccV40xMj.o
+ .data          0x0000000000001c00        0x0 C:\Users\INVITA~1\AppData\Local\Temp\ccP64yZQ.o
+ .data          0x0000000000001c00        0x0 c:/tp1_rv32e/tools/xpack-risc_v/bin/../lib/gcc/riscv-none-elf/12.2.0/rv32e/ilp32e\libgcc.a(div.o)
+ *(.data*)
+ *(.sdata)
+ .sdata         0x0000000000001c00        0x1 C:\Users\INVITA~1\AppData\Local\Temp\ccP64yZQ.o
+ *(.sdata*)
+                0x0000000000001c04                . = ALIGN (0x4)
+ *fill*         0x0000000000001c01        0x3 
+                0x0000000000001c04                _edata = .
+
+.bss            0x0000000000001c04       0x24 load address 0x0000000000000c90
+                0x0000000000001c04                . = ALIGN (0x4)
+                0x0000000000001c04                _sbss = .
+ *(.bss)
+ .bss           0x0000000000001c04        0x0 C:\Users\INVITA~1\AppData\Local\Temp\ccV40xMj.o
+ .bss           0x0000000000001c04       0x20 C:\Users\INVITA~1\AppData\Local\Temp\ccP64yZQ.o
+                0x0000000000001c04                udat
+ .bss           0x0000000000001c24        0x0 c:/tp1_rv32e/tools/xpack-risc_v/bin/../lib/gcc/riscv-none-elf/12.2.0/rv32e/ilp32e\libgcc.a(div.o)
+ *(.bss*)
+ *(.sbss)
+ .sbss          0x0000000000001c24        0x2 C:\Users\INVITA~1\AppData\Local\Temp\ccP64yZQ.o
+                0x0000000000001c24                wrix
+                0x0000000000001c25                rdix
+ *(.sbss*)
+ *(COMMON)
+                0x0000000000001c28                . = ALIGN (0x4)
+ *fill*         0x0000000000001c26        0x2 
+                0x0000000000001c28                _ebss = .
+
+.heap           0x0000000000001c28        0x0 load address 0x0000000000000c90
+                0x0000000000001c28                . = ALIGN (0x4)
+                0x0000000000001c28                _heap_start = .
+LOAD C:\Users\INVITA~1\AppData\Local\Temp\ccV40xMj.o
+LOAD C:\Users\INVITA~1\AppData\Local\Temp\ccP64yZQ.o
+LOAD c:/tp1_rv32e/tools/xpack-risc_v/bin/../lib/gcc/riscv-none-elf/12.2.0/rv32e/ilp32e\libgcc.a
+OUTPUT(code.elf elf32-littleriscv)
+
+.riscv.attributes
+                0x0000000000000000       0x20
+ .riscv.attributes
+                0x0000000000000000       0x1e C:\Users\INVITA~1\AppData\Local\Temp\ccV40xMj.o
+ .riscv.attributes
+                0x000000000000001e       0x20 C:\Users\INVITA~1\AppData\Local\Temp\ccP64yZQ.o
+ .riscv.attributes
+                0x000000000000003e       0x1a c:/tp1_rv32e/tools/xpack-risc_v/bin/../lib/gcc/riscv-none-elf/12.2.0/rv32e/ilp32e\libgcc.a(div.o)
+
+.comment        0x0000000000000000       0x33
+ .comment       0x0000000000000000       0x33 C:\Users\INVITA~1\AppData\Local\Temp\ccP64yZQ.o
+                                         0x34 (size before relaxing)

@@ -23,10 +23,10 @@ module UARTB_CORE(
 parameter BAUDBITS=9;
 
 ///ADDED_BEGIN // Nuevos registros para la implementación de modos
-  reg [31:0]tbr;     //added // Transmitter Buffer Register (32 bits)
+reg [31:0]tbr;     //added // Transmitter Buffer Register (32 bits)
 reg mode;           //added // 1: Ráfaga, 0: Normal (configurado con wrbaud, bit 31)
 reg moden;          //added // Registro del modo para la próxima carga a THR (registrado con wrtx)
-  reg [1:0] cntbyte;  //added // Contador de bytes para el modo ráfaga (0 a 3)
+reg [1:0] cntbyte;  //added // Contador de bytes para el modo ráfaga (0 a 3)
 reg data_word_pending = 1'b0; //added // Señal de palabra disponible en tbr
 reg thr_just_loaded = 1'b0; //added // Señal para resetear divtx y empezar la transmisión
 ///ADDED_END
@@ -70,7 +70,7 @@ wire clko;                // pulsos de 1 ciclo de salida
 assign clko = (divtx==0);
 always @ (posedge clk)
     divtx <= thr_just_loaded ? 0 : (clko ? divider: divtx-1); //modified // Resetea divtx cuando THR es cargado
-    ///previo- divtx <= (wrtx&rdy) ? 0 : (clko ? divider: divtx-1);
+    ///previo: divtx <= (wrtx&rdy) ? 0 : (clko ? divider: divtx-1);
   
 ///ADDED_BEGIN // Lógica de extracción de byte de TBR a THR
 wire next_byte_request; //added 
@@ -84,13 +84,12 @@ assign next_byte_request = thre & rdy; //added // THR vacío Y Shift Register id
     if (next_byte_request) begin //added // Si la UART está lista para el siguiente byte
       if (data_word_pending) begin //added // Y hay una palabra pendiente en TBR
         if (moden == 1'b0) begin //added // MODO NORMAL: Envío de 1 byte
-    ///previo- if (wrtx) begin      // Escritura en buffer THR
+    ///previo: if (wrtx) begin      // Escritura en buffer THR
           
 `ifdef SIMULATION
                 $write ("%c",tbr&255); // Solo muestra el LSB
                 $fflush ( );
 `endif
-          
                 thr <= tbr[7:0];
                 thre <= 1'b0; // THR ocupado
           
@@ -109,7 +108,7 @@ assign next_byte_request = thre & rdy; //added // THR vacío Y Shift Register id
                     default: thr <= 8'hXX; //added // No debería pasar
                 endcase //added 
                 
-                thre <= 1'b0; // THR ocupado
+                thre <= 1'b0; //added // THR ocupado
               
                 thr_just_loaded <= 1'b1; //added // Activar pulso para divtx
                 

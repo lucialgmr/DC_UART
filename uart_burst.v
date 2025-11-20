@@ -44,7 +44,7 @@ always @(posedge clk) begin
     end ///added
 end ///added
 
-///added // Registro TBR y Registro MODEN
+///ADDED_BEGIN // Registro TBR y Registro MODEN
   always @(posedge clk) begin ///added
     if (wrtx) begin ///added           
         tbr<=d; ///added               // La CPU escribe 32 bits en TBR (Dirección Base)
@@ -53,6 +53,7 @@ end ///added
         cntbyte <= 2'b00; ///added     // Resetear el contador de byte para empezar desde LSB (Byte 0)
     end ///added
 end ///added
+///ADDED_END
 
 //---------------------------------------------------------
 //  Transmisor (Adaptado)
@@ -63,7 +64,7 @@ reg [8:0]shtx=9'h1FF;   // Reg. desplazamiento de 9 bits
 reg [3:0]cntbit;        // Contador de bits transmitidos
 reg rdy=1;             // Estado reg. despl. (1==idle)
 
-// Divisor de TX ///added // Ahora depende de la carga de THR
+// Divisor de TX // Ahora depende de la carga de THR
 reg [BAUDBITS-1:0] divtx=0;
 wire clko;                // pulsos de 1 ciclo de salida
 assign clko = (divtx==0);

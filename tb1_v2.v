@@ -1,11 +1,12 @@
 //-------------------------------------------------------------------\
-//-- Test Bench ADAPTADO para UARTB_CORE (Modo Normal, Modo Ráfaga y Loopback)
-//-- Solución 3: Constantes de tiempo definidas como localparam
-//--             *dentro* del bloque 'initial' para máxima compatibilidad.
+//-- Test Bench ADAPTADO para UARTB_CORE (Modo Normal, Ráfaga y Loopback)
+//-- Solución 5: USO DE RETARDOS HARDCODED (VALORES NUMÉRICOS FIJOS)
+//--             Máxima compatibilidad para simuladores estrictos.
+//-- CÁLCULOS: Clock=20ns, BRG=7 -> T_bit=160ns, T_char=1600ns (10 bits)
 //-------------------------------------------------------------------\
 
 `timescale 1ns/10ps
-`include "uart_burst.v" // Se asume este nombre de archivo para el CORE
+`include "uart_burst (1).v" // Se asume este nombre de archivo para el CORE
 
 module tb();
 
@@ -20,6 +21,9 @@ reg rd = 0;       // Pulso de lectura RX (borra DV)
 // Señal de salida TX del módulo
 wire txd;
 
+// Valor constante para el divisor BRG (7 -> 8 ciclos de reloj por bit)
+localparam T_DIVIDER = 7; 
+
 // Se asume que UARTB_CORE es la instancia de tu módulo
 UARTB_CORE myUART(
   .txd(txd),
@@ -32,6 +36,7 @@ UARTB_CORE myUART(
 );
 
 //--- LOOPBACK: Cortocircuita txd con rxd ---
+// Retardo de 1ns para evitar dependencias combinacionales (posible en Verilog)
 always @(txd) begin
     #1 rxd = txd;
 end
@@ -46,14 +51,13 @@ initial begin
     $dumpfile("tb.vcd");
     $dumpvars(0, tb);
     
-    // Constantes de simulación definidas localmente y USADAS INMEDIATAMENTE
-    // T_clk=20ns, Divisor=7+1=8 (BRG=7) -> T_bit = T_clk * 8 = 160 ns.
-    localparam T_DIVIDER = 7;
-    localparam T_BIT = (T_DIVIDER + 1) * 20;  // 160 ns
-    localparam T_CHAR = T_BIT * 10;           // 1600 ns (10 bits: Start + 8 Datos + Stop)
-    
-    $display("--- Testbench UARTB Iniciado ---");
-    $display("T_clk = 20 ns. Divisor (BRG) = %0d. T_bit = %0d ns.", T_DIVIDER, T_BIT);
+    // TIEMPOS CALCULADOS (Divisor 7):
+    // T_BIT = 160 ns
+    // T_CHAR = 1600 ns (Start + 8 Datos + Stop)
+    // T_BURST_4BYTES = 6400 ns (4 * T_CHAR)
+
+    $display("--- Testbench UARTB Iniciado (Valores Fijos) ---");
+    $display("T_clk = 20 ns. Divisor (BRG) = %0d. T_bit = 160 ns.", T_DIVIDER);
 
     // 1. CONFIGURACIÓN INICIAL: DIVIDER=7 y MODE=0 (Normal)
     #50;
@@ -70,38 +74,37 @@ initial begin
     #10 wrtx = 0; 
     $display("@%0t: Enviando 'A' (Modo Normal).", $time);
     
-    // Esperar la transmisión completa de 'A' 
-    #(T_CHAR); 
+    // Esperar la transmisión completa de 'A' (1600 ns)
+    #1600; 
 
     // Enviar 'B' (0x42)
     wrtx = 1; d = 32'h00000042; 
     #10 wrtx = 0; 
     $display("@%0t: Enviando 'B' (Modo Normal).", $time);
     
-    // Esperar un tiempo intermedio antes de conmutar
-    #(T_CHAR / 2); 
+    // Esperar un tiempo intermedio antes de conmutar (800 ns = 1/2 T_CHAR)
+    #800; 
 
 
     // 3. CONMUTACIÓN A MODO RÁFAGA (MODE=1)
-    // Conmutamos a MODE=1 (bit 31), manteniendo DIVIDER=7
     wrbaud = 1; 
-    d = 32'h80000000 | T_DIVIDER; 
+    d = 32'h80000000 | T_DIVIDER; // Bit 31 a 1 para MODO RÁFAGA
     #10 wrbaud = 0;
     $display("@%0t: Conmutado a Modo Ráfaga (MODE=1).", $time);
     
-    // Esperar a que 'B' termine de transmitirse
-    #(T_CHAR / 2); 
+    // Esperar a que 'B' termine de transmitirse (800 ns restantes)
+    #800; 
 
 
     // 4. FASE MODO RÁFAGA (TX de 32 bits)
-    // Enviar "ABCD" (0x44434241 - Little Endian, LSB primero)
+    // Enviar "ABCD" (0x44434241 - Little Endian)
     wrtx = 1; 
     d = 32'h44434241; 
     #10 wrtx = 0; 
-    $display("@%0t: Enviando Ráfaga 1 (0x44434241: DCBA).", $time);
+    $display("@%0t: Enviando Ráfaga (0x44434241: DCBA).", $time);
     
-    // Esperar la transmisión completa de la RÁFAGA (4 bytes * 10 ciclos de bit)
-    #(T_CHAR * 4); 
+    // Esperar la transmisión completa de la RÁFAGA (4 bytes * 1600 ns = 6400 ns)
+    #6400; 
 
 
     // 5. FASE MODO NORMAL FINAL (TX de 1 byte)

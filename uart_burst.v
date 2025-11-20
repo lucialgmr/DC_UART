@@ -6,11 +6,11 @@
 
 module UARTB_CORE(
   output txd,    // Salida TX
-  output tend,     // Flag TX completa
+  output tend,   // Flag TX completa
   output thre,   // Flag Buffer TX vacío
   input [31:0]d, // Datos TX (32 bits), BRG (parte baja)
   input wrtx,    // Escritura en TBR
-  input wrbaud,     // Escritura en BRG y MODE
+  input wrbaud,  // Escritura en BRG y MODE
   output [7:0]q, // Datos RX
   output dv,     // Flag dato RX válido
   output fe,     // Flag Framing Error
@@ -22,100 +22,110 @@ module UARTB_CORE(
 
 parameter BAUDBITS=9;
 
-// (modificado1511) Nuevos registros para la implementación de modos
-reg [31:0]tbr;      // Transmitter Buffer Register (32 bits)
-reg mode;           // 1: Ráfaga, 0: Normal (configurado con wrbaud, bit 31)
-reg moden;          // Registro del modo para la próxima carga a THR (registrado con wrtx)
-reg [1:0] cntbyte;  // Contador de bytes para el modo ráfaga (0 a 3)
-reg data_word_pending = 1'b0; // Señal de palabra disponible en tbr
-reg thr_just_loaded = 1'b0; // Señal para resetear divtx y empezar la transmisión
+//modified // Nuevos registros para la implementación de modos
+reg [31:0]tbr;       //modified // Transmitter Buffer Register (32 bits)
+reg mode;           //modified // 1: Ráfaga, 0: Normal (configurado con wrbaud, bit 31)
+reg moden;          //modified // Registro del modo para la próxima carga a THR (registrado con wrtx)
+reg [1:0] cntbyte;  //modified // Contador de bytes para el modo ráfaga (0 a 3)
+reg data_word_pending = 1'b0; //modified // Señal de palabra disponible en tbr
+reg thr_just_loaded = 1'b0; //modified // Señal para resetear divtx y empezar la transmisión
 
 //---------------------------------------------------------
 // Bloque de Escritura: TBR, BRG y MODE
 //---------------------------------------------------------
 
-// (modificado1511) BAUD Rate Generation y Registro MODE
+// BAUD Rate Generation y Registro MODE
 reg [BAUDBITS-1:0]divider=0;
 always @(posedge clk) begin
-    if (wrbaud) begin
+  if (wrbaud) begin ///added 'begin'
         divider<=d[BAUDBITS-1:0]; // BRG en los bits bajos de D
-        mode<=d[31];              // Bit MODO en bit 31 de D
-    end
-end
+        mode<=d[31]; ///added        // Bit MODO en bit 31 de D
+    end ///added
+end ///added
 
-// (modificado1511) Registro TBR y Registro MODEN
-always @(posedge clk) begin
-    if (wrtx) begin
-        tbr<=d;           // La CPU escribe 32 bits en TBR (Dirección Base)
-        moden<=mode;      // Se registra el modo actual para la futura transmisión
-        data_word_pending <= 1'b1; // Nueva palabra para transmitir
-        cntbyte <= 2'b00; // Resetear el contador de byte para empezar desde LSB (Byte 0)
-    end
-end
+///added // Registro TBR y Registro MODEN
+  always @(posedge clk) begin ///added
+    if (wrtx) begin ///added           
+        tbr<=d; ///added               // La CPU escribe 32 bits en TBR (Dirección Base)
+        moden<=mode; ///added          // Se registra el modo actual para la futura transmisión
+        data_word_pending <= 1'b1; ///added // Nueva palabra para transmitir
+        cntbyte <= 2'b00; ///added     // Resetear el contador de byte para empezar desde LSB (Byte 0)
+    end ///added
+end ///added
 
 //---------------------------------------------------------
 //  Transmisor (Adaptado)
 //---------------------------------------------------------
 reg [7:0]thr;           // Buffer TX (8 bits)
-reg thre=1;                // Estado THR 1: vacío, 0: con dato
-reg [8:0]shtx=9'h1FF;    // Reg. desplazamiento de 9 bits
+reg thre=1;             // Estado THR 1: vacío, 0: con dato
+reg [8:0]shtx=9'h1FF;   // Reg. desplazamiento de 9 bits
 reg [3:0]cntbit;        // Contador de bits transmitidos
-reg rdy=1;                // Estado reg. despl. (1==idle)
+reg rdy=1;             // Estado reg. despl. (1==idle)
 
-// Divisor de TX (modificado1511) Ahora depende de la carga de THR
+// Divisor de TX ///added // Ahora depende de la carga de THR
 reg [BAUDBITS-1:0] divtx=0;
 wire clko;                // pulsos de 1 ciclo de salida
 assign clko = (divtx==0);
 always @ (posedge clk)
-    divtx <= thr_just_loaded ? 0 : (clko ? divider: divtx-1); // Resetea divtx cuando THR es cargado
+    divtx <= thr_just_loaded ? 0 : (clko ? divider: divtx-1); //modified // Resetea divtx cuando THR es cargado
+    ///previo- divtx <= (wrtx&rdy) ? 0 : (clko ? divider: divtx-1);
+  
+//added // Lógica de extracción de byte de TBR a THR
+wire next_byte_request; //added 
+assign next_byte_request = thre & rdy; //added // THR vacío Y Shift Register idle
 
-// (modificado1511) Lógica de extracción de byte de TBR a THR
-wire next_byte_request;
-assign next_byte_request = thre & rdy; // THR vacío Y Shift Register idle
-
-always @(posedge clk) begin
+  always @(posedge clk) begin
     // Resetear flag de carga al inicio del ciclo
-    thr_just_loaded <= 1'b0;
+    thr_just_loaded <= 1'b0; //added 
 
-    if (next_byte_request) begin // Si la UART está lista para el siguiente byte
-        if (data_word_pending) begin // Y hay una palabra pendiente en TBR
-            if (moden == 1'b0) begin // MODO NORMAL: Envío de 1 byte
+    if (next_byte_request) begin //added // Si la UART está lista para el siguiente byte
+      if (data_word_pending) begin //added // Y hay una palabra pendiente en TBR
+        if (moden == 1'b0) begin //added // MODO NORMAL: Envío de 1 byte
+    ///previo- if (wrtx) begin      // Escritura en buffer THR
+          
 `ifdef SIMULATION
                 $write ("%c",tbr&255); // Solo muestra el LSB
                 $fflush ( );
 `endif
+          
                 thr <= tbr[7:0];
                 thre <= 1'b0; // THR ocupado
-                thr_just_loaded <= 1'b1; // Activar pulso para divtx
-                data_word_pending <= 1'b0; // Palabra enviada (solo 1 byte en modo normal)
-            end else begin // MODO RÁFAGA: Envío de 4 bytes secuenciales
+          
+                thr_just_loaded <= 1'b1; //added // Activar pulso para divtx
+                data_word_pending <= 1'b0; //added // Palabra enviada (solo 1 byte en modo normal)
+            end 
+  ///ADDED_BEGIN
+            else begin //modified // MODO RÁFAGA: Envío de 4 bytes secuenciales
                 // Selecciona el byte a transmitir
-                case (cntbyte)
-                    2'b00: thr <= tbr[7:0];   // Byte 0
-                    2'b01: thr <= tbr[15:8];  // Byte 1
-                    2'b10: thr <= tbr[23:16]; // Byte 2
-                    2'b11: thr <= tbr[31:24]; // Byte 3
-                    default: thr <= 8'hXX; // No debería pasar
-                endcase
+              case (cntbyte) //modified 
+                    2'b00: thr <= tbr[7:0];   //modified // Byte 0
+                    2'b01: thr <= tbr[15:8];  //modified // Byte 1
+                    2'b10: thr <= tbr[23:16]; //modified // Byte 2
+                    2'b11: thr <= tbr[31:24]; //modified // Byte 3
+                    default: thr <= 8'hXX; //modified // No debería pasar
+                endcase //modified 
                 
                 thre <= 1'b0; // THR ocupado
-                thr_just_loaded <= 1'b1; // Activar pulso para divtx
+              
+                thr_just_loaded <= 1'b1; //modified // Activar pulso para divtx
                 
                 // Actualiza el contador y el flag de palabra pendiente
-                if (cntbyte == 2'b11) begin // Final de la ráfaga (byte 3)
-                    data_word_pending <= 1'b0; // Palabra completa enviada
-                    cntbyte <= 2'b00; // Resetear
+                if (cntbyte == 2'b11) begin //modified // Final de la ráfaga (byte 3)
+                    data_word_pending <= 1'b0; //modified // Palabra completa enviada
+                    cntbyte <= 2'b00; //modified // Resetear
                 end else begin
                     cntbyte <= cntbyte + 1; // Avanzar al siguiente byte
                 end
             end
         end
     end
-
-    // (modificado1511) Lógica de carga de registro de desplazamiento (Shift Register)
+///ADDED_END
+    
+    // Lógica de carga de registro de desplazamiento (Shift Register)
     // El cargado ocurre si THR acaba de cargarse (thr_just_loaded=1)
-    if(thr_just_loaded) begin
-        rdy<=1'b0;
+    if(thr_just_loaded) begin //modified
+    ///previo-  if(rdy&(~thre)) begin      // Carga de reg. desp
+        rdy<=1'b0; 
         thre<=1'b1; // THR se vacía inmediatamente al cargar el Shift Register
         shtx<={thr[7:0],1'b0};  // Incluido bit de START
         cntbit<=4'b0000;

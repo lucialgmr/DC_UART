@@ -122,7 +122,7 @@ assign next_byte_request = thre & rdy;   //added // THR vacío Y Shift Register 
     
     // Lógica de carga de registro de desplazamiento (Shift Register)
     if(thr_just_loaded) begin                  //modified // El cargado ocurre si THR acaba de cargarse (thr_just_loaded=1)
-    ///previo-  if(rdy&(~thre)) begin // Carga de reg. desp
+    ///previo:  if(rdy&(~thre)) begin // Carga de reg. desp
         rdy<=1'b0; 
         thre<=1'b1;                   // THR se vacía inmediatamente al cargar el Shift Register
         shtx<={thr[7:0],1'b0};        // Incluido bit de START

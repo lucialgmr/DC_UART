@@ -5,7 +5,7 @@
 //-------------------------------------------------------------------\
 
 `timescale 1ns/10ps
-`include "uart_burst (1).v" // Se asume este nombre de archivo para el CORE
+`include "uart_burst.v" // Se asume este nombre de archivo para el CORE
 
 module tb();
 

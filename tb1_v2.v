@@ -45,11 +45,6 @@ initial begin
     $dumpfile("tb.vcd");
     $dumpvars(0, tb);
     
-    // Parámetros de simulación
-    // El tiempo de bit (T_bit) será (DIVIDER + 1) * T_clk = 8 * 20 ns = 160 ns
-    parameter T_CLK = 20;
-    parameter DIVIDER = 7; // Divisor de frecuencia entre 8
-    
     $display("--- Testbench UARTB Iniciado ---");
 
     // 1. CONFIGURACIÓN INICIAL: DIVIDER=7 y MODE=0 (Normal)

@@ -40,7 +40,7 @@ reg [BAUDBITS-1:0]divider=0;
 always @(posedge clk) begin
   if (wrbaud) begin ///added 'begin'
         divider<=d[BAUDBITS-1:0]; // BRG en los bits bajos de D
-        mode<=d[31]; ///added        // Bit MODO en bit 31 de D
+    mode<=d[31]; ///added        // Bit MODO en bit 31 de D
     end ///added
 end ///added
 
@@ -72,10 +72,11 @@ always @ (posedge clk)
     divtx <= thr_just_loaded ? 0 : (clko ? divider: divtx-1); //modified // Resetea divtx cuando THR es cargado
     ///previo- divtx <= (wrtx&rdy) ? 0 : (clko ? divider: divtx-1);
   
-//added // Lógica de extracción de byte de TBR a THR
+///ADDED_BEGIN // Lógica de extracción de byte de TBR a THR
 wire next_byte_request; //added 
 assign next_byte_request = thre & rdy; //added // THR vacío Y Shift Register idle
-
+///ADDED_END
+  
   always @(posedge clk) begin
     // Resetear flag de carga al inicio del ciclo
     thr_just_loaded <= 1'b0; //added 
@@ -93,30 +94,31 @@ assign next_byte_request = thre & rdy; //added // THR vacío Y Shift Register id
                 thr <= tbr[7:0];
                 thre <= 1'b0; // THR ocupado
           
+  ///ADDED_BEGIN     
                 thr_just_loaded <= 1'b1; //added // Activar pulso para divtx
                 data_word_pending <= 1'b0; //added // Palabra enviada (solo 1 byte en modo normal)
             end 
-  ///ADDED_BEGIN
-            else begin //modified // MODO RÁFAGA: Envío de 4 bytes secuenciales
+  
+            else begin //added // MODO RÁFAGA: Envío de 4 bytes secuenciales
                 // Selecciona el byte a transmitir
-              case (cntbyte) //modified 
-                    2'b00: thr <= tbr[7:0];   //modified // Byte 0
-                    2'b01: thr <= tbr[15:8];  //modified // Byte 1
-                    2'b10: thr <= tbr[23:16]; //modified // Byte 2
-                    2'b11: thr <= tbr[31:24]; //modified // Byte 3
-                    default: thr <= 8'hXX; //modified // No debería pasar
-                endcase //modified 
+              case (cntbyte) //added 
+                    2'b00: thr <= tbr[7:0];   //added // Byte 0
+                    2'b01: thr <= tbr[15:8];  //added // Byte 1
+                    2'b10: thr <= tbr[23:16]; //added // Byte 2
+                    2'b11: thr <= tbr[31:24]; //added // Byte 3
+                    default: thr <= 8'hXX; //added // No debería pasar
+                endcase //added 
                 
                 thre <= 1'b0; // THR ocupado
               
-                thr_just_loaded <= 1'b1; //modified // Activar pulso para divtx
+                thr_just_loaded <= 1'b1; //added // Activar pulso para divtx
                 
                 // Actualiza el contador y el flag de palabra pendiente
-                if (cntbyte == 2'b11) begin //modified // Final de la ráfaga (byte 3)
-                    data_word_pending <= 1'b0; //modified // Palabra completa enviada
-                    cntbyte <= 2'b00; //modified // Resetear
+                if (cntbyte == 2'b11) begin //added // Final de la ráfaga (byte 3)
+                    data_word_pending <= 1'b0; //added // Palabra completa enviada
+                    cntbyte <= 2'b00; //added // Resetear
                 end else begin
-                    cntbyte <= cntbyte + 1; // Avanzar al siguiente byte
+                    cntbyte <= cntbyte + 1; //added // Avanzar al siguiente byte
                 end
             end
         end

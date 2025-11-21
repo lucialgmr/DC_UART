@@ -1,5 +1,5 @@
 //--------------------------------------------------------------------
-// RISC-V things cambios 20/11
+// RISC-V things
 // by Jesús Arias (2022)
 //--------------------------------------------------------------------
 /*
@@ -50,7 +50,6 @@
 */
 
 `include "laRVa.v"
-`include "uart_burst.v"
 `include "uart.v"
 
 module SYSTEM (
@@ -148,14 +147,10 @@ always@*
  casex (ca[7:2])
     6'b000xx0: iodo<={24'hx,uart_do};
     6'b000xx1: iodo<={27'hx,ove,fe,tend,thre,dv};
-    6'b100000:
-		if(mode == 1'b0)
-			iodo<={24'hx,uartb0_do}; 
-		else 
-			iodo<={uartb0_do};//(modificado1511) Lectura de RX_data de UARTB0 (0x80)
+    6'b100000: iodo<={24'hx,uartb0_do}; //(modificado1511) Lectura de RX_data de UARTB0 (0x80)
     6'b100001: iodo<={27'hx,ove_b0,fe_b0,tend_b0,thre_b0,dv_b0}; //(modificado1511) Lectura de FLAGS de UARTB0 (0x84)
     6'b011xxx: iodo<=tcount;
-    6'b111xxx: iodo<={28'hx,irqen};
+    6'b111xxx: iodo<={30'hx,irqen}; //--------------------------------------- ahora 28 porq tenemos 4 bits---------------
 default: iodo<=32'hxxxxxxxx; //(modificado1511) Mantenida como default
  endcase
 
@@ -174,7 +169,7 @@ wire tend_b0, thre_b0, dv_b0, fe_b0, ove_b0; // Flags UARTB
 wire [7:0] uartb0_do; // RX output data UARTB
 wire uwrtx_b0; // UARTB TX write
 wire urd_b0; // UARTB RX read
-//wire uwrbaud_b0; // UARTB BGR/MODE write
+wire uwrbaud_b0; // UARTB BGR/MODE write
 wire txd_b0, rxd_b0; //(modificado1511) Líneas serie para UARTB
 assign rxd_b0 = txd_b0; //(modificado1511) Loopback para simulación
 
@@ -182,22 +177,16 @@ assign rxd_b0 = txd_b0; //(modificado1511) Loopback para simulación
 // Offset 0: write: TX Holding reg
 // Offset 0: read strobe: Clear DV, OVE (also reads RX data buffer)
 // Offset 1: write: BAUD divider
-
-parameter BAUDBITS = 12;
-
 assign uwrtx   = uartcs & (~ca[2]) & mwe[0];
 assign uwrbaud = uartcs & ( ca[2]) & mwe[0] & mwe[1]; // UART0 a 16 bits
 assign urd     = uartcs & (~ca[2]) & (mwe==4'b0000); // Clear DV, OVE flgas
 
 // (modificado1511) Register mapping UARTB0 (ca[3:2] para 0x80 y 0x84)
 // Dirección Base (0x80): Escritura (wrtx) para TX_data (32 bits), Lectura (urd_b0) para RX_data (limpia flags)
-if(mode==1'b0)
-	assign uwrtx_b0   = uartb0cs & (~ca[2]) & (mwe!=4'b0000); //(modificado1511) wrtx si se está en 0x80 y se escribe algo
-else
-	assign uwrtx_b0   = uartb0cs & (~ca[2]) & (mwe==4'b1111); //(modificado1511) wrtx si se está en 0x80 y se escribe algo
+assign uwrtx_b0   = uartb0cs & (~ca[2]) & (mwe!=4'b0000); //(modificado1511) wrtx si se está en 0x80 y se escribe algo
 assign urd_b0     = uartb0cs & (~ca[2]) & (mwe==4'b0000); //(modificado1511) urd si se está en 0x80 y se lee
 // Dirección Base+4 (0x84): Escritura (wrbaud_b0) para DIVIDER/MODE (32 bits), Lectura (gestionada por iodo)
-assign uwrbaud_b0 = uartb0cs & (ca[2]) & mwe[0] & mwe[1]; //(modificado1511) wrbaud si se está en 0x84 y se escribe algo (PORQUE OCUPA BAUDBITS) QUE SON 8+1
+assign uwrbaud_b0 = uartb0cs & ( ca[2]) & (mwe!=4'b0000); //(modificado1511) wrbaud si se está en 0x84 y se escribe algo
 
 
 UART_CORE #(.BAUDBITS(12)) uart0 ( .clk(cclk), .txd(txd), .rxd(rxd),
@@ -214,7 +203,6 @@ UARTB_CORE #(.BAUDBITS(12)) uartb0 (
     .wrbaud(uwrbaud_b0),
     .rd(urd_b0),
     .q(uartb0_do),
-	.mode(modeB),
     .dv(dv_b0),
     .fe(fe_b0),
     .ove(ove_b0),
@@ -226,25 +214,19 @@ UARTB_CORE #(.BAUDBITS(12)) uartb0 (
 //    Interrupt control
 
 // IRQ enable reg
-reg [4:0]irqen=0;  //changed_2310 CAMBIADO
+reg [2:0]irqen=0;  //changed_2310 //cambiarlo ahora hay 4 bits de errores----------------------------------------
 always @(posedge cclk or posedge reset) begin
     if (reset) irqen<=0;
 else
-    if (irqcs & (~ca[4]) &mwe[0]) irqen<=cdo[4:0];  //changed_2310
+    if (irqcs & (~ca[4]) &mwe[0]) irqen<=cdo[2:0];  //changed_2310---------------------y aqui-------------------
 end
 
 // (modificado1511) Fuentes de IRQ: agrupando DV y THRE de ambas UARTS
-//wire irq_rx_all = dv | dv_b0; //(modificado1511) RX pendiente (cualquier UART)
-//wire irq_tx_all = thre | thre_b0; //(modificado1511) TX pendiente (cualquier UART)
+wire irq_rx_all = dv | dv_b0; //(modificado1511) RX pendiente (cualquier UART)
+wire irq_tx_all = thre | thre_b0; //(modificado1511) TX pendiente (cualquier UART)
 
 // IRQ vectors
-reg [31:2]irqvect[0:3]; //(modificado1511) Ampliación a 5 vectores (0 a 4) //PONGO 4
-
-//COMPACTO LO DE ABAJO
-//reg [31:2]irqvect[0:3];
-//always @(posedge cclk) if (irqcs & ca[4] & (mwe==4'b1111)) irqvect[ca[3:2]]<=cdo[31:2];
-
-//no lo acabo de entender
+reg [31:2]irqvect[0:4]; //(modificado1511) Ampliación a 5 vectores (0 a 4)
 always @(posedge cclk) begin //(modificado1511) Bloque de escritura de vectores
     if (irqcs & ca[4] & (mwe==4'b1111)) begin
         // Se asume que las direcciones F0, F4, F8, FC se usarán para V0-V3, y remapeamos las fuentes:
@@ -259,63 +241,47 @@ always @(posedge cclk) begin //(modificado1511) Bloque de escritura de vectores
     end
 end //(modificado1511)
 
-// Enabled IRQs
-wire irqrx_group= ( irqen[0]&dv | irqen[1]&dv_b0 );// interrupciones lectura	
-wire irqtx_group= ( irqen[3]&thre | irqen[4]&thre_b0);// interrupciones escritura	
-wire [1:0] irqpen = {irqtx_group, irqrx_group};	// pending IRQs	
-
-/*
-// Priority encoder du
-wire [1:0]vecn = trap      ? 2'b00 : (	// ECALL, EBREAK: highest priority
-				 irqpen[0] ? 2'b01 : (	// UARTF FULL		//changed_2.2
-				 irqpen[1] ? 2'b10 : (	// UART y UARTF RX	//changed_2.2
-				 irqpen[2] ? 2'b11 : 	// UART y UARTF TX	//changed_2.2
-				 			 2'bxx )));		
-assign ivector = irqvect[vecn];
-assign irq = (irqpen!=0)|trap;
-*/
-
 // (modificado1511) Asignación de flags para el priority encoder (5 fuentes)
 // Orden de prioridad (de más alta a más baja): Trap > UARTB0_RX > UARTB0_TX > UART0_RX > UART0_TX > IGPO
-/*wire irq_dv_b0_pen = irqen[0]&dv_b0; //(modificado1511)
+wire irq_dv_b0_pen = irqen[0]&dv_b0; //(modificado1511)
 wire irq_thre_b0_pen = irqen[1]&thre_b0; //(modificado1511)
 wire irq_dv_pen = irqen[0]&dv; //(modificado1511)
 wire irq_thre_pen = irqen[1]&thre; //(modificado1511)
-wire irq_igpo_pen = irqen[2]&IGPO; //(modificado1511)*/
+wire irq_igpo_pen = irqen[2]&IGPO; //(modificado1511)
 
 // (modificado1511) Priority encoder (3 bits para 5 vectores: 0 a 4)
-/*wire [1:0]vecn_3b_sel = trap ? 3'b00 : ( //(modificado1511) Vector 0: Trap
-    irq_dv_b0_pen   ? 3'b01 : ( //(modificado1511) Vector 1: UARTB0 RX
-    irq_thre_b0_pen ? 3'b10 : ( //(modificado1511) Vector 2: UARTB0 TX
-    irq_dv_pen      ? 3'b11 : ( //(modificado1511) Vector 3: UART0 RX
+wire [2:0]vecn_3b_sel = trap ? 3'b000 : ( //(modificado1511) Vector 0: Trap
+    irq_dv_b0_pen   ? 3'b001 : ( //(modificado1511) Vector 1: UARTB0 RX
+    irq_thre_b0_pen ? 3'b010 : ( //(modificado1511) Vector 2: UARTB0 TX
+    irq_dv_pen      ? 3'b011 : ( //(modificado1511) Vector 3: UART0 RX
     irq_thre_pen    ? 3'b100 : ( //(modificado1511) Vector 4: UART0 TX
     irq_igpo_pen    ? 3'b101 :   //(modificado1511) Vector 5: IGPO (Fuera de los 5 vectores)
                     3'bxxx ))))); //(modificado1511)
 
 assign ivector = irqvect[vecn_3b_sel[2:0]]; //(modificado1511) Se usa el resultado de 3 bits para indexar el array
 assign irq = (irq_rx_all | irq_tx_all | irq_igpo_pen) | trap; //(modificado1511) IRQ activa si hay alguna interrupción pendiente o Trap
-*/
+
 // ... (resto del código del GPO)
 
-/*
 // IRQ vectors
+reg [31:2]irqvect[0:3];
 always @(posedge cclk) if (irqcs & ca[4] & (mwe==4'b1111)) irqvect[ca[3:2]]<=cdo[31:2];
 
 // Enabled IRQs
 wire [2:0]irqpen={irqen[2]&IGPO, irqen[1]&thre, irqen[0]&dv}; //pending IRQS //changed_2310
-*/
+
 // Priority encoder
 wire [1:0]vecn = trap      ? 2'b00 : (    // ECALL, EBREAK: highest priority
                  irqpen[0] ? 2'b01 : (    // UART RX
                  irqpen[1] ? 2'b10 : (  // UART TX
-                 irqpen[2] ? 2'b11 :     // UART IGP0 //changed_2310 ¿¿¿¿¿¿???????????????
+                 irqpen[2] ? 2'b11 :     // UART IGP0 //changed_2310
                               2'bxx )));
 assign ivector = irqvect[vecn];
 assign irq = (irqpen!=0)|trap;
 
 /////////////////////////////////////////////////////////////changed_2310
 // GPO output reg
-/*reg [31:0] outreg;
+reg [31:0] outreg;
 reg IGPO =0;
 wire [3:0] owr;
 
@@ -338,7 +304,7 @@ always@ (posedge clk or posedge reset)
 
 endmodule    // System
 
-*/
+
 //////////////////////////////////////////////////////////////////////////////
 //----------------------------------------------------------------------------
 //-- 32-bit RAM Memory with independent byte-write lanes

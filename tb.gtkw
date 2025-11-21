@@ -1,0 +1,51 @@
+[*]
+[*] GTKWave Analyzer v3.3.100 (w)1999-2019 BSI
+[*] Fri Nov 21 13:30:18 2025
+[*]
+[dumpfile] "C:\TP1_RV32E\laRVa_DC\tb.vcd"
+[dumpfile_mtime] "Fri Nov 21 13:07:28 2025"
+[dumpfile_size] 53964
+[savefile] "C:\TP1_RV32E\laRVa_DC\tb.gtkw"
+[timestart] 0
+[size] 1920 1017
+[pos] -61 -61
+*-16.452461 70000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] tb.
+[sst_width] 221
+[signals_width] 212
+[sst_expanded] 1
+[sst_vpaned_height] 172
+@28
+tb.dut.clk
+@22
+tb.dut.d[31:0]
+@28
+tb.dut.wrbaud
+tb.dut.clko
+@22
+tb.dut.divider[8:0]
+tb.dut.divtx[8:0]
+@28
+tb.dut.thr_just_loaded
+@22
+tb.dut.divider[8:0]
+tb.dut.cbrx[3:0]
+@28
+tb.dut.wrtx
+@23
+tb.dut.tbr[31:0]
+@22
+tb.dut.thr[7:0]
+tb.dut.shtx[8:0]
+@28
+tb.dut.thre
+@22
+tb.dut.cntbit[3:0]
+tb.dut.mode
+@28
+tb.dut.moden
+tb.dut.rxd
+@22
+tb.dut.rbr[7:0]
+[pattern_trace] 1
+[pattern_trace] 0

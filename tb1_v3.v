@@ -68,8 +68,8 @@ always #10 clk = ~clk;
 task send_byte_normal;
     input [7:0] data;
 begin
-    d    = {24'h0, data};
-    wrtx = 1;
+    #4    d    = {24'h0, data};
+	wrtx = 1;
     #20 wrtx = 0;
     $display("@%0t: TX NORMAL -> %02h", $time, data);
 end
@@ -143,8 +143,8 @@ initial begin
     //------------------------------------------------------
     // Enviar palabras de 32 bits en ráfaga
     //------------------------------------------------------
-    send_word_burst(32'h44434241); // "ABCD"
-    send_word_burst(32'h33323130); // "0123"
+    //send_word_burst(32'h44434241); // "ABCD"
+    //send_word_burst(32'h33323130); // "0123"
     send_word_burst(32'h616C6F68); // "hola"
 
     // Leer 8 bytes (puedes aumentar si quieres)
@@ -175,3 +175,4 @@ initial begin
 end
 
 endmodule
+

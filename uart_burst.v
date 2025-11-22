@@ -39,8 +39,8 @@ reg thr_just_loaded = 1'b0;    //added // Señal para resetear divtx y empezar l
 reg [BAUDBITS-1:0]divider=0;
 always @(posedge clk) begin
   if (wrbaud) begin               ///added 'begin'
-        divider<=d[BAUDBITS-1:0];           // BRG en los bits bajos de D
-    mode<=d[31];                  ///added // Bit MODO en bit 31 de D
+      divider<=d[BAUDBITS-1:0];             // BRG en los bits bajos de D
+      mode<=d[31];                ///added // Bit MODO en bit 31 de D
     end                           ///added
 end                               ///added
 
@@ -64,7 +64,7 @@ reg [8:0]shtx=9'h1FF;   // Reg. desplazamiento de 9 bits
 reg [3:0]cntbit;        // Contador de bits transmitidos
 reg rdy=1;              // Estado reg. despl. (1==idle)
 
-reg load_shift_reg = 1'b0; ///added // Flag para cargar shtx un ciclo después de thr_just_loaded
+reg load_shift_reg = 1'b0; //added // Flag para cargar shtx un ciclo después de thr_just_loaded
 
 // Divisor de TX // Ahora depende de la carga de THR
 reg [BAUDBITS-1:0] divtx=0;
@@ -81,27 +81,24 @@ assign next_byte_request = thre & rdy;   //added // THR vacío Y Shift Register 
   
   always @(posedge clk) begin
     thr_just_loaded <= 1'b0;              //added // Resetear flag de carga al inicio del ciclo
+    load_shift_reg <= thr_just_loaded;    //added // Se activa un ciclo después de thr_just_loaded. Retara señal carga
     
-    // Retraso de la señal de carga
-    load_shift_reg <= thr_just_loaded;    //added // Se activa un ciclo después de thr_just_loaded
-    
-    ///previo: if (wrtx) begin  // Escritura en buffer THR
+    ///previo: if (wrtx) begin                    // Escritura en buffer THR
     if (next_byte_request) begin          //added // Si la UART está lista para el siguiente byte
       if (data_word_pending) begin        //added // Y hay una palabra pendiente en TBR
-        if (moden == 1'b0) begin          //added // MODO NORMAL: Envío de 1 byte
-          
+        
+        if (moden == 1'b0) begin          //added // MODO NORMAL: Envío de 1 byte   
 `ifdef SIMULATION
-                $write ("%c",tbr&255);    //modified // Solo muestra el LSB
-                ///previo: $write ("%c",d&255);
+                $write ("%c",tbr&255);    //modified // Solo muestra el LSB ///previo: $write ("%c",d&255);
                 $fflush ( );
 `endif
                 thr <= tbr[7:0];
-                thre <= 1'b0; // THR ocupado    
-                thr_just_loaded <= 1'b1;        //added // Activar pulso para divtx
-                data_word_pending <= 1'b0;      //added // Palabra enviada (solo 1 byte en modo normal)
+                thre <= 1'b0;                       // THR ocupado    
+                thr_just_loaded <= 1'b1;    //added // Activar pulso para divtx
+                data_word_pending <= 1'b0;  //added // Palabra enviada (solo 1 byte en modo normal)
             end
         
-  ///ADDED_BEGIN 
+            ///ADDED_BEGIN
             else begin                          //added // MODO RÁFAGA: Envío de 4 bytes secuenciales
               
               case (cntbyte)                    //added // Selecciona el byte a transmitir
@@ -124,22 +121,22 @@ assign next_byte_request = thre & rdy;   //added // THR vacío Y Shift Register 
             end                                 //added
         end                                     //added
     end                                         //added
-///ADDED_END
+            ///ADDED_END
     
     // Lógica de carga de registro de desplazamiento (Shift Register)
     if(load_shift_reg) begin  	 //modified // Activación con el retraso de 1 ciclo
         rdy<=1'b0; 
-        thre<=1'b1;                			 // THR se vacía inmediatamente al cargar el Shift Register
-        shtx<={1'b1, thr[7:0]}; //modified   // Carga con el '1' delante //previo: shtx<={thr[7:0],1'b0};        
+        thre<=1'b1;                			    // THR se vacía inmediatamente al cargar el Shift Register
+        shtx<={1'b1, thr[7:0]}; //modified  // Carga con el '1' delante //previo: shtx<={thr[7:0],1'b0};        
         cntbit<=4'b0000;
     end
     
     // Lógica de desplazamiento y conteo
     if (clko) begin
-        if(~rdy && !thr_just_loaded) begin    //modified //añadida condición judt_loaded //solo se desplaza si no vamos a cargar
+      if(~rdy && !thr_just_loaded) begin    //modified //añadida condición judt_loaded. solo se desplaza si no vamos a cargar
             shtx<={1'b1,shtx[8:1]};
             cntbit<=cntbit+1;
-            if (cntbit[3]&cntbit[0]) rdy<=1'b1; // 9 bits: terminado
+            if (cntbit[3]&cntbit[0]) rdy<=1'b1;        // 9 bits: terminado
         end
     end
 end
@@ -201,5 +198,6 @@ end
 
 assign fe=~stopb;   // el Flag FE es el bit de STOP invertido
 assign q = rbr;
+
 
 endmodule

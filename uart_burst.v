@@ -127,7 +127,7 @@ assign next_byte_request = thre & rdy;   //added // THR vacío Y Shift Register 
     if(load_shift_reg) begin  	 //modified // Activación con el retraso de 1 ciclo
         rdy<=1'b0; 
         thre<=1'b1;                			    // THR se vacía inmediatamente al cargar el Shift Register
-        shtx<={1'b1, thr[7:0]}; //modified  // Carga con el '1' delante //previo: shtx<={thr[7:0],1'b0};        
+        shtx<={thr[7:0],1'b0};   
         cntbit<=4'b0000;
     end
     
@@ -201,3 +201,4 @@ assign q = rbr;
 
 
 endmodule
+

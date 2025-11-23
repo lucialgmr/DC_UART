@@ -260,10 +260,11 @@ always @(posedge clk) begin
     if (re) data_out <= ram_array[addr];
 end
 
-initial begin
-    // Carga el programa generado por `make Firmware` en la RAM
-    $readmemh("code.bin", ram_array);
-end
+`ifdef SIMULATION
+  initial $readmemh("rom.hex", ram_array);
+`else
+  initial $readmemh("rand.hex", ram_array);
+`endif
 
 
 endmodule

@@ -261,12 +261,10 @@ always @(posedge clk) begin
 end
 
 initial begin
-`ifdef SIMULATION
-    $readmemh("rom.hex", ram_array);
-`else
-    $readmemh("rand.hex", ram_array);
-`endif
+    // Carga el programa generado por `make Firmware` en la RAM
+    $readmemh("code.bin", ram_array);
 end
+
 
 endmodule
 

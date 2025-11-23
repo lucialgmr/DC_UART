@@ -1,151 +1,138 @@
 ##############################################################################
-# RESET & PROGRAMA DE TEST PARA UARTB0
+# start.S - Programa de prueba UARTB0 para RV32E (LaRVa)
+# - Sin C main, sin librerías, todo en ensamblador
+# - Solo usa registros x0..x15 (zero, ra, sp, gp, tp, t0..t2, s0..s1, a0..a5)
 ##############################################################################
 
+    .section .boot
+    .globl reset_vec
+reset_vec:
+    j start
+
+##############################################################################
+# Código principal
+##############################################################################
     .section .text
-    .globl _start
+    .globl start
     .globl irq1_handler
 
-#----------------------------------------------------------------------
-# Punto de entrada tras reset
-#----------------------------------------------------------------------
-_start:
-    # Inicializar la pila (8KB de RAM basta para el test)
-    li  sp, 8192
+start:
+    ################################################################
+    # 0) (Opcional) inicializar la pila
+    ################################################################
+    li   sp, 8192
 
-    # Llamar a main (programa de prueba)
-    call main
+    ################################################################
+    # 1) Base de E/S: 0xE0000000  → a0
+    ################################################################
+    lui  a0, 0xE0000          # a0 = 0xE0000000
 
-# Si main terminara, nos quedamos en un bucle infinito
-hang:
-    j hang
+    ################################################################
+    # 2) Configurar vector 4 del VIC con la dirección de irq1_handler
+    #    Vector 4 está mapeado en 0xE00000E4
+    ################################################################
+    addi a1, a0, 0x0E4        # a1 = 0xE00000E4
+    la   a2, irq1_handler     # a2 = &irq1_handler
+    sw   a2, 0(a1)
 
-##############################################################################
-# PROGRAMA PRINCIPAL
-##############################################################################
-# Objetivos:
-# 1) Configurar el VIC para que la interrupción de TX de UARTB0 (thre_b0)
-#    use el vector 4.
-# 2) Configurar UARTB0 en modo normal (MODE=0) con divisor 7.
-# 3) Enviar "Hola mundo" carácter a carácter desde la ISR.
-# 4) Esperar a recibir 0x00 por RX.
-# 5) Pasar a modo ráfaga (MODE=1) y enviar "ABCD" y "FGHI".
-##############################################################################
+    ################################################################
+    # 3) Habilitar interrupción TX de UARTB0 (bit 3 de IRQEN)
+    #    IRQEN está en 0xE00000E0
+    ################################################################
+    addi a1, a0, 0x0E0        # a1 = 0xE00000E0
+    li   a2, 8                # 1 << 3
+    sw   a2, 0(a1)
 
-main:
-    ##################################################################
-    # a) Configurar vector de interrupción 4 (UARTB0 TX)
-    ##################################################################
-    # t0 = 0xE0000000
-    lui t0, 0xE0000
+    ################################################################
+    # 4) Configurar UARTB0 en modo normal (MODE=0, DIVIDER=7)
+    #    UARTB_DATA: 0xE0000080
+    #    UARTB_CTRL: 0xE0000084
+    ################################################################
+    addi a3, a0, 0x0080       # a3 = UARTB_DATA
+    addi a4, a3, 4            # a4 = UARTB_CTRL
+    li   a5, 7                # DIVIDER=7, MODE=0 (bit31=0)
+    sw   a5, 0(a4)
 
-    # Dirección del vector 4: 0xE00000E4
-    addi t1, t0, 0x0E4      # t1 = 0xE00000E4
+    ################################################################
+    # 5) Inicializar puntero al string "Hola mundo"
+    ################################################################
+    la   s0, msg              # s0 -> "Hola mundo\0"
 
-    # Cargar la dirección de irq1_handler
-    la   t2, irq1_handler
+    ################################################################
+    # 6) Enviar primer carácter para arrancar la cadena de IRQs
+    ################################################################
+    lb   a1, 0(s0)            # a1 = *s0
+    sw   a1, 0(a3)            # escribir en TX_data (UARTB_DATA)
+    addi s0, s0, 1            # avanzar puntero
 
-    # Escribirla en el vector 4
-    sw   t2, 0(t1)
-
-    ##################################################################
-    # b) Habilitar interrupción TX de UARTB0 (bit 3 de IRQEN)
-    ##################################################################
-    addi t3, t0, 0x0E0      # t3 = 0xE00000E0 (IRQEN)
-    li   t4, 8              # 1 << 3
-    sw   t4, 0(t3)
-
-    ##################################################################
-    # c) Configurar UARTB0 en modo normal, DIVIDER = 7
-    ##################################################################
-    addi t5, t0, 0x080      # t5 = 0xE0000080 (UARTB base)
-    addi t6, t5, 4          # t6 = 0xE0000084 (DIVIDER/MODE)
-    li   t7, 7              # MODE=0 (bit 31=0), DIVIDER=7
-    sw   t7, 0(t6)
-
-    ##################################################################
-    # d) Inicializar puntero al string "Hola mundo"
-    ##################################################################
-    la   s0, msg            # s0 -> primer carácter
-
-    ##################################################################
-    # e) Forzar primera transmisión para arrancar la cadena de IRQs
-    ##################################################################
-wait_thre0:
-    lw   a0, 0(t6)          # leer FLAGS/MODE/DIVIDER
-    andi a1, a0, 0b00010    # THRE = bit 1
-    beqz a1, wait_thre0
-
-    lb   a2, 0(s0)          # primer carácter
-    sw   a2, 0(t5)          # escribir en TX_data
-    addi s0, s0, 1          # avanzar puntero
-
-    ##################################################################
-    # f) Bucle de espera: hasta que RX reciba 0x00
-    ##################################################################
+    ################################################################
+    # 7) Esperar hasta recibir 0x00 por RX (polling en DV + RX_data)
+    ################################################################
 wait_zero:
-    lw   a3, 0(t6)          # FLAGS
-    andi a4, a3, 0b00001    # DV = bit 0
-    beqz a4, wait_zero      # si no hay dato, seguir esperando
+    lw   a2, 0(a4)            # leer FLAGS de UARTB0 (DV en bit 0)
+    andi a2, a2, 1
+    beqz a2, wait_zero        # si DV=0, seguir esperando
 
-    lw   a5, 0(t5)          # leer RX_data (limpia DV)
-    bnez a5, wait_zero      # mientras != 0x00, seguir
+    lw   a3, 0(a3)            # leer RX_data
+    bnez a3, wait_zero        # mientras no sea 0x00, repetir
 
-    ##################################################################
-    # g) Pasar a modo ráfaga, mismo divisor
-    ##################################################################
-    li   a6, 7
-    lui  a7, 0x80000        # bit 31 = 1
-    or   a6, a6, a7         # MODE=1, DIVIDER=7
-    sw   a6, 0(t6)
+    ################################################################
+    # 8) Pasar a modo ráfaga (MODE=1, DIVIDER=7)
+    ################################################################
+    li   a1, 7
+    lui  a2, 0x80000          # bit 31 = 1
+    or   a1, a1, a2           # MODE=1, DIVIDER=7
+    sw   a1, 0(a4)
 
-    ##################################################################
-    # h) Enviar ráfaga "ABCD"
-    ##################################################################
-    li   t1, 0x41424344
-    sw   t1, 0(t5)
+    ################################################################
+    # 9) Enviar ráfaga "ABCD"
+    ################################################################
+    li   a2, 0x41424344       # 'A','B','C','D'
+    sw   a2, 0(a3)
 
-    ##################################################################
-    # i) Enviar ráfaga "FGHI"
-    ##################################################################
-    li   t1, 0x46474849
-    sw   t1, 0(t5)
+    ################################################################
+    # 10) Enviar ráfaga "FGHI"
+    ################################################################
+    li   a2, 0x46474849       # 'F','G','H','I'
+    sw   a2, 0(a3)
 
 end_main:
-    j end_main              # bucle infinito final
+    j end_main                # bucle infinito final
+
 
 ##############################################################################
 # RUTINA DE SERVICIO DE INTERRUPCIÓN (ISR) PARA UARTB0 TX (thre_b0)
 ##############################################################################
-# Cada vez que thre_b0 se activa:
+# Cada vez que thre_b0 está a 1 y la IRQ está habilitada:
 #   - Se envía el carácter apuntado por s0.
 #   - Se incrementa s0.
-#   - Si el carácter es 0x00, se deshabilita la IRQ de TX y se sale.
+#   - Si el carácter es 0x00, se deshabilita la interrupción y se termina.
 ##############################################################################
 
 irq1_handler:
-    # Base UARTB0 = 0xE0000080
-    lui  t0, 0xE0000
-    addi t0, t0, 0x080
+    # Base UARTB0 DATA = 0xE0000080 → a0
+    lui  a0, 0xE0000
+    addi a0, a0, 0x0080
 
-    # Cargar siguiente carácter
-    lb   t1, 0(s0)
-    sw   t1, 0(t0)          # enviarlo
+    # Cargar siguiente carácter del string
+    lb   a1, 0(s0)
+    sw   a1, 0(a0)            # enviarlo
 
-    beqz t1, isr_disable    # si es 0x00, fin de cadena
+    beqz a1, irq_disable      # si es 0x00, deshabilitar IRQ
 
-    addi s0, s0, 1          # avanzar puntero
-    mret                    # volver de la interrupción
+    addi s0, s0, 1            # avanzar puntero
+    mret                      # volver de la interrupción
 
-isr_disable:
-    # Deshabilitar la interrupción TX (bit 3) poniendo IRQEN=0
-    lui  t2, 0xE0000
-    addi t2, t2, 0x0E0
-    sw   zero, 0(t2)
+irq_disable:
+    # IRQEN = 0 → deshabilitar todas las IRQ externas
+    lui  a0, 0xE0000
+    addi a0, a0, 0x0E0        # 0xE00000E0
+    sw   zero, 0(a0)
     mret
 
+
 ##############################################################################
-# Subrutina de delay (por si la necesitas en pruebas)
+# Rutina de delay (por si se quisiera usar en pruebas)
 ##############################################################################
     .globl delay_loop
 delay_loop:
@@ -153,9 +140,11 @@ delay_loop:
     bnez a0, delay_loop
     ret
 
+
 ##############################################################################
 # Datos de solo lectura
 ##############################################################################
     .section .rodata
 msg:
     .asciz "Hola mundo"
+

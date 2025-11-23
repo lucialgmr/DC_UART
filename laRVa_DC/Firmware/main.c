@@ -96,23 +96,7 @@ uint32_t __attribute__((naked)) getMEPC()
 	);
 }
 
-void __attribute__((interrupt ("machine"))) irq1_handler()
-{
-	_printf("\nTRAP at 0x%x\n",getMEPC());
-}
 
-
-void __attribute__((interrupt ("machine"))) irq2_handler()
-{
-	udat[wrix++]=UARTDAT;
-	wrix&=31;
-}
-
-void  __attribute__((interrupt ("machine"))) irq3_handler(){
-	static uint8_t a=32;
-	UARTDAT=a;
-	if (++a>=128) a=32;
-}
 
 
 // --------------------------------------------------------
@@ -145,69 +129,3 @@ uint8_t *_memcpy(uint8_t *pdst, uint8_t *psrc, uint32_t nb)
 	return pdst;
 }
 
-void main()
-{
-	char c,buf[17];
-	uint8_t *p;
-	unsigned int i,j;
-	int n;
-	void (*pcode)();
-	uint32_t *pi;
-	uint16_t *ps;
-
-	UARTBAUD=(CCLK+BAUD/2)/BAUD -1;	
-	_delay_ms(100);
-	c = UARTDAT;		// Clear RX garbage
-	IRQVECT0=(uint32_t)irq1_handler;
-	IRQVECT1=(uint32_t)irq2_handler;
-	IRQVECT2=(uint32_t)irq3_handler;
-
-
-	IRQEN=1;			// Enable UART RX IRQ
-
-	asm volatile ("ecall");
-	asm volatile ("ebreak");
-	_puts(menutxt);
-	_puts("Hola mundo\n");
-	
-	while (1)
-	{
-			_puts("Command [123dx]> ");
-			char cmd = _getch();
-			if (cmd > 32 && cmd < 127)
-				_putch(cmd);
-			_puts("\n");
-
-			switch (cmd)
-			{
-			case '1':
-			    _puts(menutxt);
-				break;
-			case '2':
-				IRQEN^=2;	// Toggle IRQ enable for UART TX
-				_delay_ms(100);
-				break;
-			case 'x':
-				_puts("Upload APP from serial port (<crtl>-F) and execute\n");
-				if(getw()!=0x66567270) break;
-				p=(uint8_t *)getw();
-				n=getw();
-				i=getw();
-				if (n) {
-					do { *p++=_getch(); } while(--n);
-				}
-
-				if (i>255) {
-					pcode=(void (*)())i;
-					pcode();
-				} 
-				break;
-			case 'q':
-				asm volatile ("jalr zero,zero");
-			case 't':
-				break;
-			default:
-				continue;
-			}
-	}
-}

@@ -1,25 +1,15 @@
 `timescale 1ns/1ps
 
-// Activamos un define opcional para distinguir simulación (si lo necesitas)
-`define SIMULATION
-
-// Incluimos el sistema completo
 `include "system.v"
 
 module tb;
 
-//-----------------------------------------------------
-// Señales del testbench
-//-----------------------------------------------------
 reg clk;
-reg reset;        // reset global activo alto
-reg rxd;          // línea RX de la UART0 (no se usa en la prueba de UARTB0)
-wire txd;         // línea TX de la UART0
+reg reset;
+reg rxd;
+wire txd;
 wire [7:0] salida;
 
-//-----------------------------------------------------
-// Instancia del sistema LaRVa
-//-----------------------------------------------------
 SYSTEM uut (
     .clk    (clk),
     .reset  (reset),
@@ -28,34 +18,29 @@ SYSTEM uut (
     .salida (salida)
 );
 
-//-----------------------------------------------------
-// Generación de reloj: 25 MHz (periodo = 40 ns)
-//-----------------------------------------------------
+// Reloj 25 MHz
 initial begin
     clk = 1'b0;
-    forever #20 clk = ~clk;   // 25 MHz
+    forever #20 clk = ~clk;
 end
 
-//-----------------------------------------------------
-// Reset inicial y línea RX en estado idle
-//-----------------------------------------------------
+// Reset con mensajes por consola
 initial begin
-    reset = 1'b1;  // activamos reset
-    rxd   = 1'b1;  // UART en reposo (nivel alto)
-    #200;          // 200 ns de reset
-    reset = 1'b0;  // desactivamos reset → arranca la CPU
+    $display("TB: inicio simulacion en t=%0t", $time);
+    reset = 1'b1;
+    rxd   = 1'b1;         // UART idle
+    #200;
+    $display("TB: desactivando reset en t=%0t", $time);
+    reset = 1'b0;
+    #2000000;
+    $display("TB: FIN SIMULACION en t=%0t", $time);
+    $finish;
 end
 
-//-----------------------------------------------------
-// Volcado de ondas y fin de simulación
-//-----------------------------------------------------
+// Volcado de ondas
 initial begin
     $dumpfile("waves.vcd");
-    $dumpvars(0, tb);   // volcar todas las señales del testbench
-
-    #2000000;           // tiempo total de simulación (~2 ms)
-    $display("FIN DE LA SIMULACION");
-    $finish;
+    $dumpvars(0, tb);
 end
 
 endmodule
